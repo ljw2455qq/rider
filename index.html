@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,83 +5,53 @@
   <title>GPS 오버레이</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    html, body { margin: 0; background: transparent; color: white; font-family: sans-serif; }
-    #map { height: 300px; width: 100%; }
-    .info-box {
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      font-size: 16px;
-    }
+    html, body { margin: 0; background: transparent; }
+    #map { height: 100vh; }
     .leaflet-marker-icon.circle-icon {
       border-radius: 50%;
       border: 2px solid white;
-      box-shadow: 0 0 5px #000;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="info-box" id="info">GPS 대기 중...</div>
-
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script>
-    let map = L.map('map').setView([35.1291, 126.8540], 17);
-    let totalDistance = 0, prevLat = null, prevLng = null;
-    const payPerKm = 4000;
+    const firebaseConfig = {
+  apiKey: "AIzaSyA5hMmN9QFgdFtaA5gicS_pj-blu_jJdvE",
+  authDomain: "rider-bf48b.firebaseapp.com",
+  databaseURL: "https://rider-bf48b-default-rtdb.firebaseio.com",
+  projectId: "rider-bf48b",
+  storageBucket: "rider-bf48b.firebasestorage.app",
+  messagingSenderId: "1026929653322",
+  appId: "1:1026929653322:web:b90541cccba5b4186198b3",
+  measurementId: "G-Z0H55KJ1W7"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const myIcon = L.icon({
-      iconUrl: 'profile.png',
+    const map = L.map('map').setView([35.1291, 126.8540], 17);
+    const icon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
       iconSize: [48, 48],
       iconAnchor: [24, 24],
       className: 'circle-icon'
     });
+    const marker = L.marker([0, 0], { icon }).addTo(map);
 
-    let marker = L.marker([35.1291, 126.8540], { icon: myIcon }).addTo(map);
+    db.ref('location').on('value', snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        marker.setLatLng([data.lat, data.lng]);
+        map.setView([data.lat, data.lng]);
+      }
+    });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19
     }).addTo(map);
-
-    function deg2rad(d) { return d * (Math.PI / 180); }
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = deg2rad(lat2 - lat1);
-      const dLon = deg2rad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function updateInfo() {
-      const km = totalDistance.toFixed(2);
-      const earn = Math.floor(totalDistance * payPerKm);
-      document.getElementById('info').innerHTML = `이동 거리: ${km} km<br>수익: ${earn.toLocaleString()} 원`;
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(pos => {
-        const lat = pos.coords.latitude, lng = pos.coords.longitude;
-        marker.setLatLng([lat, lng]);
-        map.setView([lat, lng]);
-
-        if (prevLat !== null && prevLng !== null) {
-          const d = getDistance(prevLat, prevLng, lat, lng);
-          if (d < 1) totalDistance += d;
-        }
-        prevLat = lat;
-        prevLng = lng;
-
-        updateInfo();
-      }, err => {
-        document.getElementById('info').textContent = 'GPS 오류: ' + err.message;
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 2000,
-        timeout: 10000
-      });
-    }
   </script>
 </body>
 </html>
