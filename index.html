@@ -1,87 +1,174 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <title>GPS 오버레이</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
-    html, body { margin: 0; background: transparent; color: white; font-family: sans-serif; }
-    #map { height: 300px; width: 100%; }
-    .info-box {
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      font-size: 16px;
-    }
-    .leaflet-marker-icon.circle-icon {
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 0 5px #000;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Live Overlay (Mapbox + Firebase)</title>
+
+<!-- mapbox -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+<style>
+  :root { --accent:#ff3344; --bg:rgba(0,0,0,0.55); --text:#fff; }
+  html,body { height:100%; margin:0; background:transparent; font-family:Arial,Helvetica,sans-serif; color:var(--text); }
+  #container{position:relative;width:100%;height:100%;}
+  /* small map box bottom-right (프랭크 스타일) */
+  #map { position:absolute; right:18px; bottom:18px; width:260px; height:260px; border-radius:10px; overflow:hidden; border:2px solid rgba(255,255,255,0.9); z-index:40; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+  /* bottom bar */
+  .bottombar { position:absolute; left:0; right:0; bottom:6px; margin:0 auto; height:48px; background:var(--bg); display:flex; align-items:center; gap:12px; padding:6px 12px; z-index:50; border-radius:6px; max-width:calc(100% - 24px); }
+  .metric { display:flex; align-items:center; gap:6px; font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,.7); }
+  .metric .big { font-weight:700; color:var(--accent); margin-left:6px; }
+  .right-block { margin-left:auto; display:flex; gap:8px; align-items:center; font-size:14px; color:#ddd; }
+  .logo { width:20px; height:20px; object-fit:contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+  /* small fullscreen transparent area to keep overlay transparent behind */
+  #overlay-bg{position:absolute; inset:0; pointer-events:none;}
+  .pill { background:rgba(255,255,255,0.06); padding:6px 10px; border-radius:999px; display:inline-flex; gap:8px; align-items:center; }
+</style>
 </head>
 <body>
+<div id="container">
   <div id="map"></div>
-  <div class="info-box" id="info">GPS 대기 중...</div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    let map = L.map('map').setView([35.1291, 126.8540], 17);
-    let totalDistance = 0, prevLat = null, prevLng = null;
-    const payPerKm = 4000;
+  <div class="bottombar" id="bottombar">
+    <div class="metric"><span>❤️</span><span id="likes" class="big">0</span></div>
+    <div class="metric pill"><span>이동거리:</span><strong id="distance">0.00 km</strong></div>
+    <div class="metric pill"><span>일수익:</span><strong id="earn-day">0원</strong></div>
+    <div class="metric pill"><span>주수익:</span><strong id="earn-week">0원</strong></div>
+    <div class="metric pill"><span>월수익:</span><strong id="earn-month">0원</strong></div>
+    <div class="right-block">
+      <img class="logo" id="lg-chzzk" src="https://via.placeholder.com/20/FFFFFF/000000?text=C" alt="chzzk">
+      <img class="logo" id="lg-soop" src="https://via.placeholder.com/20/FF0000/FFFFFF?text=S" alt="soop">
+      <img class="logo" id="lg-twitch" src="https://via.placeholder.com/20/6441A5/FFFFFF?text=T" alt="twitch">
+      <img class="logo" id="lg-youtube" src="https://via.placeholder.com/20/FF0000/FFFFFF?text=Y" alt="youtube">
+      <div id="local-info" style="font-size:13px;color:#ddd;margin-left:8px;"></div>
+    </div>
+  </div>
 
-    const myIcon = L.icon({
-      iconUrl: 'profile.png',
-      iconSize: [48, 48],
-      iconAnchor: [24, 24],
-      className: 'circle-icon'
-    });
+  <div id="overlay-bg"></div>
+</div>
 
-    let marker = L.marker([35.1291, 126.8540], { icon: myIcon }).addTo(map);
+<!-- Firebase (modular) -->
+<script type="module">
+  // ------------------------
+  // === 사용자 설정 섹션 ===
+  // 반드시 본인 키로 바꿔주세요
+  // ------------------------
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyA5hMmN9QFgdFtaA5gicS_pj-blu_jJdvE",
+    authDomain: "rider-bf48b.firebaseapp.com",
+    databaseURL: "https://rider-bf48b-default-rtdb.firebaseio.com",
+    projectId: "rider-bf48b",
+    storageBucket: "rider-bf48b.appspot.com",
+    messagingSenderId: "1026929653322",
+    appId: "1:1026929653322:web:b90541cccba5b4186198b3"
+  };
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiaG9vbmNvbSIsImEiOiJjbWNjM3R4enUwM3pnMmlxMWJvZTVrMWIzIn0.h_-BNK4FuriEfFWXvE1pmw";
+  // ------------------------
 
-    function deg2rad(d) { return d * (Math.PI / 180); }
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = deg2rad(lat2 - lat1);
-      const dLon = deg2rad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db = getDatabase(app);
+
+  // Mapbox init
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v12',
+    center: [126.8540, 35.1291],
+    zoom: 16,
+    interactive: false
+  });
+  // marker element
+  const el = document.createElement('div');
+  el.style.width = '36px'; el.style.height='36px';
+  el.style.borderRadius='50%'; el.style.overflow='hidden';
+  el.style.border='2px solid white';
+  el.style.boxShadow='0 3px 8px rgba(0,0,0,0.5)';
+  const img = document.createElement('img');
+  img.src = 'https://ljw2455qq.github.io/rider-324/profile.png'; // 사용자가 올린 profile 이미지(대체 가능)
+  img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
+  el.appendChild(img);
+  const marker = new mapboxgl.Marker(el).setLngLat([126.8540,35.1291]).addTo(map);
+
+  // DB refs
+  const locRef = ref(db, 'location');     // { lat:..., lng:..., ts:... }
+  const statsRef = ref(db, 'stats');      // { heart:..., distance:..., day:..., week:..., month:..., year:... }
+  const miscRef = ref(db, 'misc');        // weather, battery 등 optional
+
+  // UI elements
+  const likesEl = document.getElementById('likes');
+  const distEl = document.getElementById('distance');
+  const dayEl = document.getElementById('earn-day');
+  const weekEl = document.getElementById('earn-week');
+  const monthEl = document.getElementById('earn-month');
+  const localInfo = document.getElementById('local-info');
+
+  // distance calc helpers
+  function deg2rad(d){return d*Math.PI/180;}
+  function haversine(a,b){
+    const R=6371;
+    const dLat=deg2rad(b.lat-a.lat);
+    const dLon=deg2rad(b.lng-a.lng);
+    const A=Math.sin(dLat/2)**2 + Math.cos(deg2rad(a.lat))*Math.cos(deg2rad(b.lat))*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(A), Math.sqrt(1-A)); // km
+  }
+
+  let prev = null;
+  let totalDistance = 0;
+
+  // Listen stats (likes, earnings, distance if server keeps it)
+  onValue(statsRef, snap=>{
+    const v = snap.val();
+    if(!v) return;
+    if(v.heart != null) likesEl.textContent = v.heart;
+    if(v.distance != null){
+      totalDistance = Number(v.distance) || totalDistance;
+      distEl.textContent = totalDistance.toFixed(2)+' km';
     }
+    dayEl.textContent = (v.day||0).toLocaleString() + '원';
+    weekEl.textContent = (v.week||0).toLocaleString() + '원';
+    monthEl.textContent = (v.month||0).toLocaleString() + '원';
+  });
 
-    function updateInfo() {
-      const km = totalDistance.toFixed(2);
-      const earn = Math.floor(totalDistance * payPerKm);
-      document.getElementById('info').innerHTML = `이동 거리: ${km} km<br>수익: ${earn.toLocaleString()} 원`;
+  // Listen location updates
+  onValue(locRef, snap=>{
+    const v = snap.val();
+    if(!v || v.lat==null || v.lng==null) return;
+    const lat = Number(v.lat), lng = Number(v.lng);
+    // update marker & center
+    marker.setLngLat([lng,lat]);
+    map.setCenter([lng,lat]);
+
+    // compute incremental distance if prev exists
+    if(prev){
+      const d = haversine(prev, {lat,lng});
+      // filter GPS jitter: ignore tiny jumps <5m(0.005km) and ignore big jumps >1km
+      if(d > 0.005 && d < 1){
+        totalDistance += d;
+        // write back new distance to DB (so admin and page persist)
+        update(statsRef, { distance: Number((totalDistance).toFixed(3)) }).catch(()=>{});
+        distEl.textContent = totalDistance.toFixed(2)+' km';
+      }
     }
+    prev = {lat,lng};
+  });
 
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(pos => {
-        const lat = pos.coords.latitude, lng = pos.coords.longitude;
-        marker.setLatLng([lat, lng]);
-        map.setView([lat, lng]);
+  // local weather/time/battery (optional) - read misc
+  onValue(miscRef, snap=>{
+    const v = snap.val() || {};
+    const temp = v.temp ? `${v.temp}°C` : '';
+    const batt = v.battery ? `${v.battery}%` : '';
+    const now = new Date().toLocaleTimeString();
+    localInfo.textContent = `${temp} · ${now} · ${batt}`;
+  });
 
-        if (prevLat !== null && prevLng !== null) {
-          const d = getDistance(prevLat, prevLng, lat, lng);
-          if (d < 1) totalDistance += d;
-        }
-        prevLat = lat;
-        prevLng = lng;
-
-        updateInfo();
-      }, err => {
-        document.getElementById('info').textContent = 'GPS 오류: ' + err.message;
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 2000,
-        timeout: 10000
-      });
-    }
-  </script>
+  // fallback - if DB has no distance data, keep prev local total
+  // keep mapbox resize friendly
+  window.addEventListener('resize', ()=> map.resize());
+</script>
 </body>
 </html>
