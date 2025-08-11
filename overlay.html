@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>오버레이</title>
-<script type="module" src="./firebase.js"></script>
+
 <style>
 body{margin:0;background:none;color:#fff;font-family:Arial,Helvetica,sans-serif;}
 .overlay{
@@ -12,6 +12,7 @@ body{margin:0;background:none;color:#fff;font-family:Arial,Helvetica,sans-serif;
 }
 </style>
 </head>
+
 <body>
 
 <div class="overlay">
@@ -21,12 +22,16 @@ body{margin:0;background:none;color:#fff;font-family:Arial,Helvetica,sans-serif;
 </div>
 
 <script type="module">
-import { db } from './firebase.js';
+import { db, onValueListener } from './firebase.js';
+import { ref } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
 
-db.ref("income").on("value", snapshot => {
+// Realtime DB의 /income 경로를 구독
+const incomeRef = ref(db, 'income');
+
+onValueListener(incomeRef, snapshot => {
   const data = snapshot.val() || {};
-  document.getElementById('day').textContent   = data.day   ?? 0;
-  document.getElementById('week').textContent  = data.week  ?? 0;
+  document.getElementById('day').textContent   = data.day ?? 0;
+  document.getElementById('week').textContent  = data.week ?? 0;
   document.getElementById('month').textContent = data.month ?? 0;
 });
 </script>
