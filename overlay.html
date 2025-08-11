@@ -1,42 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>오버레이</title>
-<script src="firebase.js"></script>
+<meta charset="utf-8">
+<title>운행 거리 오버레이</title>
 <style>
-  body {
-    margin: 0;
-    background: transparent;
-    color: white;
-    font-size: 20px;
-    font-family: Arial, sans-serif;
-  }
-  .overlay {
-    display: flex;
-    gap: 20px;
-    background: rgba(0,0,0,0.6);
-    padding: 10px 20px;
-    border-radius: 8px;
-  }
+body{margin:0;background:none;color:#fff;font-family:sans-serif;}
+#dist{font-size:24px; font-weight:bold;}
+/* 입력창은 전혀 존재하지 않음 */
 </style>
+<script type="module">
+import { fetchData } from './src/main.js';
+
+let prev=null;
+async function update(){
+  const {lat,lng} = await fetchData();
+  if (!prev) { prev={lat,lng}; return; }
+  const d=haversine(prev.lat,prev.lng,lat,lng);
+  document.getElementById('dist').textContent=`${d.toFixed(1)} m`;
+  prev={lat,lng};
+}
+setInterval(update,3000);
+
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371000;
+  const φ1=Math.PI/180*lat1, φ2=Math.PI/180*lat2;
+  const Δφ=Math.PI/180*(lat2-lat1), Δλ=Math.PI/180*(lng2-lng1);
+  const a=Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+</script>
 </head>
 <body>
-<div class="overlay">
-  <div>일: <span id="day">0</span>원</div>
-  <div>주: <span id="week">0</span>원</div>
-  <div>월: <span id="month">0</span>원</div>
-</div>
-
-<script>
-db.ref("income").on("value", (snapshot) => {
-  const data = snapshot.val();
-  if (data) {
-    document.getElementById('day').textContent = data.day || 0;
-    document.getElementById('week').textContent = data.week || 0;
-    document.getElementById('month').textContent = data.month || 0;
-  }
-});
-</script>
+<div id="dist">0.0 m</div>
 </body>
 </html>
