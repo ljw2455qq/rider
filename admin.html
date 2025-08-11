@@ -1,18 +1,46 @@
-<button onclick="saveData()">저장</button>
-<script>
-function saveData() {
-    let daily = document.getElementById('daily').value;
-    let weekly = document.getElementById('weekly').value;
-    let monthly = document.getElementById('monthly').value;
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>수익 입력</title>
+<script type="module" src="./firebase.js"></script>
+</head>
+<body>
+<h1>수익 입력</h1>
 
-    db.ref('overlayData').set({
-        daily: daily,
-        weekly: weekly,
-        monthly: monthly
-    }).then(() => {
-        console.log("저장 완료");
-    }).catch((err) => {
-        console.error("저장 실패", err);
-    });
-}
+<label>일 수익 (원)
+  <input id="day" type="number" placeholder="예: 50000">
+</label>
+<br>
+<label>주 수익 (원)
+  <input id="week" type="number" placeholder="예: 300000">
+</label>
+<br>
+<label>월 수익 (원)
+  <input id="month" type="number" placeholder="예: 1200000">
+</label>
+<br>
+
+<button id="saveBtn">저장</button>
+
+<script type="module">
+import { db } from './firebase.js';
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const data = {
+    day: Number(document.getElementById('day').value) || 0,
+    week: Number(document.getElementById('week').value) || 0,
+    month: Number(document.getElementById('month').value) || 0
+  };
+
+  try {
+    await db.ref("income").set(data);   // <-- async/await 사용
+    alert('저장 완료');
+  } catch (err) {
+    console.error(err);
+    alert('저장 실패: ' + err.message);
+  }
+});
 </script>
+</body>
+</html>
