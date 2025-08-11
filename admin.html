@@ -1,104 +1,25 @@
-<!doctype html>
-<html lang="ko">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Overlay Admin (Edit earnings)</title>
-<style>
-  body{font-family:Arial; padding:14px; background:#111; color:#fff}
-  h1{margin:8px 0 16px 0}
-  label{display:block; margin-top:10px; font-size:14px}
-  input[type="number"], input[type="text"]{width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #444; background:#222; color:#fff}
-  button{margin-top:12px;padding:10px 14px;border-radius:8px;border:0;background:#2ea44f;color:#fff;font-weight:600}
-  .row{display:flex; gap:8px}
-  .small{flex:1}
-  .warn{color:#f5a623;font-size:13px;margin-top:8px}
-</style>
+<meta charset="UTF-8">
+<title>관리자 페이지</title>
+<script src="firebase.js"></script>
 </head>
 <body>
-  <h1>Overlay Admin</h1>
-  <div class="warn">* 테스트용: DB write 권한이 있어야 동작합니다. 실제 서비스 시 인증/규칙 적용 필요.</div>
+<h3>수익 입력</h3>
+<input type="number" id="day" placeholder="일 수익"><br>
+<input type="number" id="week" placeholder="주 수익"><br>
+<input type="number" id="month" placeholder="월 수익"><br>
+<button onclick="save()">저장</button>
 
-  <label>일수익 (원)</label>
-  <input id="in-day" type="number" value="0">
-
-  <label>주수익 (원)</label>
-  <input id="in-week" type="number" value="0">
-
-  <label>월수익 (원)</label>
-  <input id="in-month" type="number" value="0">
-
-  <label>좋아요(하트)</label>
-  <input id="in-heart" type="number" value="0">
-
-  <label>거리 초기화 여부</label>
-  <div class="row">
-    <button id="btn-reset-dist" class="small">거리 리셋 → 0</button>
-    <button id="btn-update" class="small">값 저장</button>
-  </div>
-
-  <hr style="margin:18px 0;border-color:#222">
-
-  <label>임시 위치 전송 (테스트용)</label>
-  <input id="in-lat" type="text" placeholder="lat e.g. 35.1291">
-  <input id="in-lng" type="text" placeholder="lng e.g. 126.8540">
-  <button id="btn-set-loc">위치 전송</button>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-    // ***** 동일한 FIREBASE_CONFIG로 설정하세요 *****
-    const FIREBASE_CONFIG = {
-      apiKey: "AIzaSyA5hMmN9QFgdFtaA5gicS_pj-blu_jJdvE",
-      authDomain: "rider-bf48b.firebaseapp.com",
-      databaseURL: "https://rider-bf48b-default-rtdb.firebaseio.com",
-      projectId: "rider-bf48b",
-      storageBucket: "rider-bf48b.appspot.com",
-      messagingSenderId: "1026929653322",
-      appId: "1:1026929653322:web:b90541cccba5b4186198b3"
-    };
-
-    const app = initializeApp(FIREBASE_CONFIG);
-    const db = getDatabase(app);
-
-    const statsRefPath = 'stats';
-    const locRefPath = 'location';
-
-    const inDay = document.getElementById('in-day');
-    const inWeek = document.getElementById('in-week');
-    const inMonth = document.getElementById('in-month');
-    const inHeart = document.getElementById('in-heart');
-
-    document.getElementById('btn-update').addEventListener('click', async ()=>{
-      const payload = {
-        day: Number(inDay.value) || 0,
-        week: Number(inWeek.value) || 0,
-        month: Number(inMonth.value) || 0,
-        heart: Number(inHeart.value) || 0
-      };
-      try{
-        await update(ref(db, statsRefPath), payload);
-        alert('저장완료');
-      }catch(e){ alert('저장실패:'+e.message) }
-    });
-
-    document.getElementById('btn-reset-dist').addEventListener('click', async ()=>{
-      try{
-        await update(ref(db, statsRefPath), { distance: 0 });
-        alert('거리 리셋됨');
-      }catch(e){ alert('리셋 실패:'+e.message) }
-    });
-
-    document.getElementById('btn-set-loc').addEventListener('click', async ()=>{
-      const lat = parseFloat(document.getElementById('in-lat').value);
-      const lng = parseFloat(document.getElementById('in-lng').value);
-      if(isNaN(lat) || isNaN(lng)){ alert('유효한 lat/lng 입력'); return; }
-      try{
-        await set(ref(db, locRefPath), { lat, lng, ts: Date.now() });
-        alert('위치 전송 완료');
-      }catch(e){ alert('위치 전송 실패:'+e.message) }
-    });
-  </script>
+<script>
+function save() {
+  db.ref("income").set({
+    day: document.getElementById('day').value || 0,
+    week: document.getElementById('week').value || 0,
+    month: document.getElementById('month').value || 0
+  });
+}
+</script>
 </body>
 </html>
