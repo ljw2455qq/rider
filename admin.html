@@ -1,53 +1,13 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>수익 입력</title>
-<script type="module" src="./firebase.js"></script>
-<style>
-  body{font-family:Arial,Helvetica,sans-serif;margin:2rem;}
-  label{display:block;margin-top:.5rem;}
-  input{width:100%;padding:.4rem;font-size:1rem;}
-  button{margin-top:1rem;padding:.6rem 1.2rem;font-size:1rem;}
-</style>
-</head>
-<body>
+<script>
+function saveData() {
+    const daily = document.getElementById('daily').value;
+    const weekly = document.getElementById('weekly').value;
+    const monthly = document.getElementById('monthly').value;
 
-<h1>수익 입력</h1>
-
-<label>일 수익 (원)
-  <input id="day" type="number" placeholder="일 수익(원)">
-</label>
-
-<label>주 수익 (원)
-  <input id="week" type="number" placeholder="주 수익(원)">
-</label>
-
-<label>월 수익 (원)
-  <input id="month" type="number" placeholder="월 수익(원)">
-</label>
-
-<button onclick="save()">저장</button>
-
-<script type="module">
-import { db } from './firebase.js';
-
-async function save() {
-  const data = {
-    day: Number(document.getElementById('day').value) || 0,
-    week: Number(document.getElementById('week').value) || 0,
-    month: Number(document.getElementById('month').value) || 0
-  };
-
-  try {
-    await db.ref("income").set(data);   // <-- 여기서 async/await 사용
-    alert('저장 완료');
-  } catch (e) {
-    console.error(e);
-    alert('저장 실패: ' + e.message);
-  }
+    db.ref('overlayData').set({
+        daily: daily,
+        weekly: weekly,
+        monthly: monthly
+    });
 }
 </script>
-
-</body>
-</html>
