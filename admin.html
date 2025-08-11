@@ -1,13 +1,18 @@
+<button onclick="saveData()">저장</button>
 <script>
 function saveData() {
-    const daily = document.getElementById('daily').value;
-    const weekly = document.getElementById('weekly').value;
-    const monthly = document.getElementById('monthly').value;
+    let daily = document.getElementById('daily').value;
+    let weekly = document.getElementById('weekly').value;
+    let monthly = document.getElementById('monthly').value;
 
     db.ref('overlayData').set({
         daily: daily,
         weekly: weekly,
         monthly: monthly
+    }).then(() => {
+        console.log("저장 완료");
+    }).catch((err) => {
+        console.error("저장 실패", err);
     });
 }
 </script>
