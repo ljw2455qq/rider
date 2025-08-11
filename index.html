@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프랭크 방송 스타일 오버레이</title>
+<style>
+    body {
+        margin: 0;
+        background: transparent;
+        font-family: Arial, sans-serif;
+        color: white;
+    }
+    .overlay {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0,0,0,0.6);
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+        font-size: 16px;
+    }
+    .stat {
+        margin-right: 15px;
+    }
+    .map-container {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 250px;
+        height: 250px;
+        border: 2px solid white;
+    }
+</style>
+<!-- Mapbox -->
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+</head>
+<body>
+
+<div class="map-container" id="map"></div>
+
+<div class="overlay" id="stats">
+    <div class="stat">이동거리: <span id="distance">0</span> km</div>
+    <div class="stat">일수익: <span id="daily">0</span>원</div>
+    <div class="stat">월수익: <span id="monthly">0</span>원</div>
+    <div class="stat">연수익: <span id="yearly">0</span>원</div>
+</div>
+
+<script>
+    // ====== 수정 가능한 데이터 (휴대폰으로 업데이트 가능) ======
+    let data = {
+        distance: 16.3,
+        daily: 0,
+        monthly: 507000,
+        yearly: 17193800
+    };
+
+    // ====== 수익 데이터 표시 ======
+    function updateStats() {
+        document.getElementById("distance").textContent = data.distance;
+        document.getElementById("daily").textContent = data.daily.toLocaleString();
+        document.getElementById("monthly").textContent = data.monthly.toLocaleString();
+        document.getElementById("yearly").textContent = data.yearly.toLocaleString();
+    }
+    updateStats();
+
+    // ====== Mapbox 지도 ======
+    mapboxgl.accessToken = '여기에_본인_Mapbox_Access_Token_입력';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [126.9780, 37.5665], // 서울 좌표 (경도, 위도)
+        zoom: 14
+    });
+
+    // 마커 추가
+    new mapboxgl.Marker({ color: 'purple' })
+        .setLngLat([126.9780, 37.5665])
+        .addTo(map);
+</script>
+</body>
+</html>
