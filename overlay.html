@@ -1,10 +1,16 @@
+<div id="overlay">
+    <span id="dailyText"></span>
+    <span id="weeklyText"></span>
+    <span id="monthlyText"></span>
+</div>
+
 <script>
 db.ref('overlayData').on('value', (snapshot) => {
-    const data = snapshot.val();
+    let data = snapshot.val();
     if (data) {
-        document.getElementById('dailyText').textContent = data.daily + '원';
-        document.getElementById('weeklyText').textContent = data.weekly + '원';
-        document.getElementById('monthlyText').textContent = data.monthly + '원';
+        document.getElementById('dailyText').textContent = "일: " + data.daily;
+        document.getElementById('weeklyText').textContent = "주: " + data.weekly;
+        document.getElementById('monthlyText').textContent = "월: " + data.monthly;
     }
 });
 </script>
