@@ -1,23 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <title>오버레이</title>
-<script src="firebase.js"></script>
+<script type="module" src="./overlay.js"></script>
 <style>
-  body {
-    margin: 0;
-    background: transparent;
-    color: white;
-    font-size: 20px;
-    font-family: Arial, sans-serif;
-  }
-  .overlay {
-    display: flex;
-    gap: 20px;
-    background: rgba(0,0,0,0.6);
-    padding: 10px 20px;
-    border-radius: 8px;
+  body{margin:0;background:none;color:#fff;font-family:Arial,Helvetica,sans-serif;}
+  .overlay{
+    display:flex;gap:20px;padding:10px 20px;
+    background:rgba(0,0,0,.6);border-radius:8px;
   }
 </style>
 </head>
@@ -28,15 +19,14 @@
   <div>월: <span id="month">0</span>원</div>
 </div>
 
-<script>
-db.ref("income").on("value", (snapshot) => {
-  const data = snapshot.val();
-  if (data) {
-    document.getElementById('day').textContent = data.day || 0;
-    document.getElementById('week').textContent = data.week || 0;
-    document.getElementById('month').textContent = data.month || 0;
-  }
-});
+<script type="module">
+  import { db } from './firebase.js';
+  db.ref("income").on("value", snapshot => {
+    const data = snapshot.val() || {};
+    document.getElementById('day').textContent   = data.day   ?? 0;
+    document.getElementById('week').textContent  = data.week  ?? 0;
+    document.getElementById('month').textContent = data.month ?? 0;
+  });
 </script>
 </body>
 </html>
