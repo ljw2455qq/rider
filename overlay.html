@@ -1,16 +1,35 @@
-<div id="overlay">
-    <span id="dailyText"></span>
-    <span id="weeklyText"></span>
-    <span id="monthlyText"></span>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>오버레이</title>
+<script type="module" src="./firebase.js"></script>
+<style>
+body{margin:0;background:none;color:#fff;font-family:sans-serif;}
+.overlay{display:flex;gap:20px;padding:10px 20px;background:rgba(0,0,0,.6);border-radius:8px;}
+</style>
+</head>
+<body>
+
+<div class="overlay">
+  <div>일: <span id="day">-</span>원</div>
+  <div>주: <span id="week">-</span>원</div>
+  <div>월: <span id="month">-</span>원</div>
 </div>
 
-<script>
-db.ref('overlayData').on('value', (snapshot) => {
-    let data = snapshot.val();
-    if (data) {
-        document.getElementById('dailyText').textContent = "일: " + data.daily;
-        document.getElementById('weeklyText').textContent = "주: " + data.weekly;
-        document.getElementById('monthlyText').textContent = "월: " + data.monthly;
-    }
+<script type="module">
+import { db } from './firebase.js';
+
+const dayEl = document.getElementById('day');
+const weekEl = document.getElementById('week');
+const monthEl = document.getElementById('month');
+
+db.ref("income").on("value", snapshot => {
+  const data = snapshot.val() || {};
+  dayEl.textContent   = data.day ?? '-';
+  weekEl.textContent  = data.week ?? '-';
+  monthEl.textContent = data.month ?? '-';
 });
 </script>
+</body>
+</html>
