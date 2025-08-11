@@ -1,40 +1,10 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>오버레이</title>
-
-<style>
-body{margin:0;background:none;color:#fff;font-family:Arial,Helvetica,sans-serif;}
-.overlay{
-  display:flex;gap:20px;padding:10px 20px;
-  background:rgba(0,0,0,.6);border-radius:8px;
-}
-</style>
-</head>
-
-<body>
-
-<div class="overlay">
-  <div>일: <span id="day">0</span>원</div>
-  <div>주: <span id="week">0</span>원</div>
-  <div>월: <span id="month">0</span>원</div>
-</div>
-
-<script type="module">
-import { db, onValueListener } from './firebase.js';
-import { ref } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
-
-// Realtime DB의 /income 경로를 구독
-const incomeRef = ref(db, 'income');
-
-onValueListener(incomeRef, snapshot => {
-  const data = snapshot.val() || {};
-  document.getElementById('day').textContent   = data.day ?? 0;
-  document.getElementById('week').textContent  = data.week ?? 0;
-  document.getElementById('month').textContent = data.month ?? 0;
+<script>
+db.ref('overlayData').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        document.getElementById('dailyText').textContent = data.daily + '원';
+        document.getElementById('weeklyText').textContent = data.weekly + '원';
+        document.getElementById('monthlyText').textContent = data.monthly + '원';
+    }
 });
 </script>
-
-</body>
-</html>
