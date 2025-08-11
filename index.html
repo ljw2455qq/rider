@@ -1,91 +1,227 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>가로형 수익 오버레이</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RealtimeIRL 오버레이 (rirl pull)</title>
 <style>
-    body {
-        margin: 0;
-        background-color: transparent;
-        font-family: Arial, sans-serif;
-        color: white;
-    }
-    .overlay {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 10px 20px;
-        border-radius: 10px;
-        font-size: 18px;
-        gap: 20px;
-    }
-    .item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    .label {
-        font-size: 14px;
-        opacity: 0.8;
-    }
-    .value {
-        font-size: 20px;
-        font-weight: bold;
-    }
-    .inputs {
-        margin-top: 10px;
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-    }
-    .inputs input {
-        padding: 5px;
-        font-size: 14px;
-        width: 80px;
-    }
-    .inputs button {
-        padding: 5px 10px;
-        font-size: 14px;
-        cursor: pointer;
-    }
+  :root{--accent:#ff5a5f}
+  html,body{height:100%;margin:0;background:transparent;font-family:Segoe UI,Arial;color:#fff}
+  .bottombar{
+    position:fixed; left:8px; right:8px; bottom:8px;
+    background:rgba(0,0,0,0.6); padding:8px 12px; border-radius:8px;
+    display:flex; gap:12px; align-items:center; z-index:99;
+  }
+  .pill{background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:999px;}
+  #map{position:fixed; right:18px; bottom:86px; width:240px; height:240px; border-radius:10px; overflow:hidden; border:2px solid rgba(255,255,255,0.9)}
+  .admin{position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.7); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; z-index:120}
+  .admin input{padding:6px; border-radius:6px; border:1px solid #333; background:#111; color:#fff}
+  .admin button{padding:8px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer}
+  .small{font-size:13px;color:#ddd}
 </style>
+
+<!-- Mapbox -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 </head>
 <body>
 
-<div class="overlay">
-    <div class="item">
-        <div class="label">일 수익</div>
-        <div class="value" id="dayIncome">0</div>
-    </div>
-    <div class="item">
-        <div class="label">주 수익</div>
-        <div class="value" id="weekIncome">0</div>
-    </div>
-    <div class="item">
-        <div class="label">월 수익</div>
-        <div class="value" id="monthIncome">0</div>
-    </div>
+<div id="map"></div>
+
+<div class="bottombar">
+  <div class="pill">❤️ <span id="likes">0</span></div>
+  <div class="pill">이동거리: <strong id="distance">0.00 km</strong></div>
+  <div class="pill">일: <strong id="day">0원</strong></div>
+  <div class="pill">주: <strong id="week">0원</strong></div>
+  <div class="pill">월: <strong id="month">0원</strong></div>
+  <div style="margin-left:auto" class="small" id="lastSeen">대기중...</div>
 </div>
 
-<div class="inputs">
-    <input type="number" id="inputDay" placeholder="일">
-    <input type="number" id="inputWeek" placeholder="주">
-    <input type="number" id="inputMonth" placeholder="월">
-    <button onclick="updateValues()">저장</button>
+<div class="admin" id="adminPanel">
+  <div class="small">관리(휴대폰으로 열어서 값 입력 가능)</div>
+  <input id="inDay" type="number" placeholder="일수익(원)">
+  <input id="inWeek" type="number" placeholder="주수익(원)">
+  <input id="inMonth" type="number" placeholder="월수익(원)">
+  <div style="display:flex; gap:8px">
+    <button id="saveBtn">저장</button>
+    <button id="resetDist">거리 리셋</button>
+    <button id="startPoll">폴링 시작</button>
+    <button id="stopPoll">중지</button>
+  </div>
+  <div class="small">pullKey: <span id="showKey"></span></div>
 </div>
 
 <script>
-    function updateValues() {
-        document.getElementById('dayIncome').textContent = 
-            document.getElementById('inputDay').value || 0;
-        document.getElementById('weekIncome').textContent = 
-            document.getElementById('inputWeek').value || 0;
-        document.getElementById('monthIncome').textContent = 
-            document.getElementById('inputMonth').value || 0;
-    }
-</script>
+/*
+ 동작 요약:
+ - RealtimeIRL Pull API를 주기적으로 호출해서 최근 위치를 받아옵니다.
+ - 최초 위치 수신 후 이전 좌표와의 거리(허버사인)를 누적하여 이동거리 계산.
+ - 수익(일/주/월)은 admin input으로 수동 기록(페이지 재로딩 시 초기화 unless 서버에 저장)
+ - pullKey: 사용자의 push/pull 키 (아래에 설정)
+ - 주의: CORS 정책으로 rirl.com에서 직접 호출 불가 시(브라우저 콘솔에 CORS 에러),
+         프록시(간단 Node/NGINX) 또는 Firebase Cloud Function 같은 중계 서버 필요.
+*/
 
+// --------- 설정: 반드시 본인 push/pull 키로 교체하세요 ----------
+const PULL_KEY = "w37f98al56ge3pvt";   // 제공하신 pushkey를 pull에도 사용(서비스 문서 따라)
+const RIRL_PULL_URL = `https://rirl.com/api/pull?key=${encodeURIComponent(PULL_KEY)}`;
+// 폴링 간격(ms)
+const POLL_INTERVAL = 2000;
+// Mapbox 토큰 (지도를 안쓰려면 마커 관련 부분 제거하면 됩니다)
+// 만약 Mapbox 필요 없으면 아래 map 관련 코드를 주석 처리하세요.
+const MAPBOX_TOKEN = ""; // 빈 문자열이면 지도를 만들지 않음
+// ----------------------------------------------------------------
+
+document.getElementById('showKey').textContent = PULL_KEY;
+
+// 상태 변수
+let pollTimer = null;
+let prevPos = null;
+let totalDistanceKm = 0;
+
+// 수익 초기값
+let stats = { day:0, week:0, month:0 };
+
+// UI 엘리먼트
+const likesEl = document.getElementById('likes');
+const distEl = document.getElementById('distance');
+const dayEl = document.getElementById('day');
+const weekEl = document.getElementById('week');
+const monthEl = document.getElementById('month');
+const lastSeenEl = document.getElementById('lastSeen');
+
+dayEl.innerText = formatMoney(stats.day);
+weekEl.innerText = formatMoney(stats.week);
+monthEl.innerText = formatMoney(stats.month);
+
+// 지도/마커 준비 (선택적)
+let map=null, marker=null;
+if(MAPBOX_TOKEN && MAPBOX_TOKEN.trim() !== ""){
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v12',
+    center: [126.8540,35.1291],
+    zoom: 15,
+    interactive: false
+  });
+  const el = document.createElement('div');
+  el.style.width='36px'; el.style.height='36px'; el.style.borderRadius='50%'; el.style.overflow='hidden';
+  el.style.border='2px solid white'; el.style.boxShadow='0 3px 8px rgba(0,0,0,0.5)';
+  const img = document.createElement('img'); img.src='https://via.placeholder.com/64'; img.style.width='100%'; img.style.height='100%';
+  el.appendChild(img);
+  marker = new mapboxgl.Marker(el).setLngLat([126.8540,35.1291]).addTo(map);
+} else {
+  // mapbox 비활성화 시 숨김
+  document.getElementById('map').style.display = 'none';
+}
+
+// 허버사인 거리 계산 (km)
+function deg2rad(d){ return d * Math.PI / 180; }
+function haversine(a,b){
+  const R=6371; // km
+  const dLat = deg2rad(b.lat - a.lat);
+  const dLon = deg2rad(b.lng - a.lng);
+  const A = Math.sin(dLat/2)**2 + Math.cos(deg2rad(a.lat))*Math.cos(deg2rad(b.lat))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1-A));
+}
+
+function formatMoney(n){ return Number(n||0).toLocaleString() + "원"; }
+
+// 폴링 함수: rirl pull 호출해서 위치정보 가져오기
+async function pollOnce(){
+  try{
+    const res = await fetch(RIRL_PULL_URL, { cache: 'no-store' });
+    if(!res.ok){
+      lastSeenEl.textContent = `pull 실패: ${res.status}`;
+      return;
+    }
+    const data = await res.json();
+    // rirl 응답 형식은 서비스에 따라 다름. 예시로 { lat: ..., lng: ..., ts: ..., heart: ... }
+    // 콘솔로 확인해서 실제 필드에 맞게 조정하세요.
+    // console.log('rirl resp', data);
+    // 지원 가능한 예시 필드 처리:
+    let lat=null, lng=null, ts=null, heart=null;
+    if(data){
+      // 여러 형태 대비
+      if(data.lat!=null && data.lng!=null){ lat=Number(data.lat); lng=Number(data.lng); }
+      else if(data.location && data.location.lat){ lat=Number(data.location.lat); lng=Number(data.location.lng); }
+      else if(data.data && data.data.lat){ lat=Number(data.data.lat); lng=Number(data.data.lng); }
+
+      if(data.ts) ts = data.ts;
+      else if(data.timestamp) ts = data.timestamp;
+      if(data.heart != null) heart = data.heart;
+      else if(data.stats && data.stats.heart != null) heart = data.stats.heart;
+    }
+
+    if(heart!=null) likesEl.textContent = heart;
+
+    if(lat!=null && lng!=null){
+      const now = Date.now();
+      lastSeenEl.textContent = `위치: ${lat.toFixed(5)},${lng.toFixed(5)} · ${new Date(now).toLocaleTimeString()}`;
+
+      // 마커/지도 업데이트
+      if(marker){
+        marker.setLngLat([lng,lat]);
+        map.setCenter([lng,lat]);
+      }
+
+      // 거리 계산: prev가 있으면 허버사인 거리 누적
+      if(prevPos){
+        const d = haversine(prevPos, {lat,lng});
+        // GPS 노이즈 필터: 5m 미만 무시, 1km 초과 이상은 점프로 간주 무시
+        if(d > 0.005 && d < 1){
+          totalDistanceKm += d;
+          distEl.textContent = totalDistanceKm.toFixed(2) + " km";
+        }
+      } else {
+        // 처음 위치 수신 시 prevPos만 세팅
+      }
+      prevPos = {lat,lng};
+    } else {
+      // 위치 없음
+      lastSeenEl.textContent = `위치 없음 (pull 응답)`;
+    }
+  }catch(err){
+    console.error('poll error', err);
+    lastSeenEl.textContent = '폴링 오류: 콘솔 확인';
+  }
+}
+
+// 폴링 제어
+function startPolling(){
+  if(pollTimer) return;
+  pollOnce();
+  pollTimer = setInterval(pollOnce, POLL_INTERVAL);
+  document.getElementById('startPoll').disabled = true;
+  document.getElementById('stopPoll').disabled = false;
+}
+function stopPolling(){
+  if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+  document.getElementById('startPoll').disabled = false;
+  document.getElementById('stopPoll').disabled = true;
+}
+
+// admin 버튼 동작
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  stats.day = Number(document.getElementById('inDay').value) || stats.day;
+  stats.week = Number(document.getElementById('inWeek').value) || stats.week;
+  stats.month = Number(document.getElementById('inMonth').value) || stats.month;
+  dayEl.textContent = formatMoney(stats.day);
+  weekEl.textContent = formatMoney(stats.week);
+  monthEl.textContent = formatMoney(stats.month);
+  alert('저장(임시, 페이지 새로고침 시 유지 안됨). 서버에 저장하려면 Firebase 사용 필요.');
+});
+document.getElementById('resetDist').addEventListener('click', ()=>{
+  totalDistanceKm = 0; prevPos = null;
+  distEl.textContent = totalDistanceKm.toFixed(2) + " km";
+});
+document.getElementById('startPoll').addEventListener('click', startPolling);
+document.getElementById('stopPoll').addEventListener('click', stopPolling);
+
+// 기본으로 자동 시작
+startPolling();
+
+</script>
 </body>
 </html>
