@@ -41,27 +41,30 @@
 
 <script>
 /**
- * 숫자를 천 단위마다 콤마를 넣어 포맷합니다.
- * 예) 1234567 → "1,234,567"
+ * 숫자이면 천 단위 콤마를 붙이고, 아니면 그대로 반환.
  */
 function formatNumber(value) {
-    // 정수값이 아니면 그대로 반환
-    if (isNaN(value)) return value;
-    // Intl.NumberFormat 사용(간단하고 국제화 지원)
-    return new Intl.NumberFormat('ko-KR').format(Math.round(value));
+    // 문자열이지만 숫자라면 정수로 변환
+    const num = typeof value === 'string' ? Number(value) : value;
+
+    if (isNaN(num)) return value;            // NaN이면 원본 그대로
+
+    // 숫자를 포맷해서 반환
+    return new Intl.NumberFormat('ko-KR').format(Math.round(num));
 }
 
 db.ref('overlayData').on('value', (snapshot) => {
     const data = snapshot.val();
-    if(data){
-        document.getElementById('dailyText')
-            .textContent   = `일 수익: ${formatNumber(parseInt(data.daily, 10))}`;
-        document.getElementById('weeklyText')
-            .textContent  = `월 수익: ${formatNumber(parseInt(data.weekly, 10))}`;
-        document.getElementById('monthlyText')
-            .textContent = `년 수익: ${formatNumber(parseInt(data.monthly, 10))}`;
-    }
+    if (!data) return;
+
+    document.getElementById('dailyText')
+        .textContent   = `일 수익: ${formatNumber(data.daily)}`;
+    document.getElementById('weeklyText')
+        .textContent  = `월 수익: ${formatNumber(data.weekly)}`;
+    document.getElementById('monthlyText')
+        .textContent = `년 수익: ${formatNumber(data.monthly)}`;
 });
 </script>
+
 </body>
 </html>
