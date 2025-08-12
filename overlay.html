@@ -48,7 +48,7 @@
 <body>
 <div id="overlay">
     <span id="dailyText">일 수익: -</span>
-    <span id="weeklyText">주 수익: -</span>
+    <span id="weeklyText">월 수익: -</span>
     <span id="monthlyText">년 수익: -</span>
 </div>
 
@@ -59,7 +59,7 @@
             document.getElementById('dailyText')
                 .textContent   = `일 수익: ${data.daily}`;
             document.getElementById('weeklyText')
-                .textContent  = `주 수익: ${data.weekly}`;
+                .textContent  = `월 수익: ${data.weekly}`;
             document.getElementById('monthlyText')
                 .textContent = `년 수익: ${data.monthly}`;
         }
