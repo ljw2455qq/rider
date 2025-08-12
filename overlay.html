@@ -10,38 +10,25 @@
 <script src="firebase.js"></script>
 
 <style>
-    /* 전체 페이지 스타일 */
     body{
         margin:0;
         padding:0;
         background:transparent;
-
-        /* OBS가 기본으로 쓰는 sans‑serif 폰트 체인 */
-        font-family:
-            -apple-system, BlinkMacSystemFont,
+        font-family:-apple-system, BlinkMacSystemFont,
             "Segoe UI", Roboto, "Noto Sans KR",
             sans-serif;
-        /* 글자 굵기 제거 */
     }
-
-    /* 오버레이 박스 */
     #overlay{
         display:flex;
         justify-content:center;
         align-items:center;
-
-        background:rgba(0,0,0,.5);  /* 반투명 검정 배경 */
-        color:white;                /* 흰색 글자 */
-
-        font-size:24px;             /* OBS와 동일한 기본 크기 */
+        background:rgba(0,0,0,.5);
+        color:white;
+        font-size:24px;
         padding:10px 20px;
         border-radius:10px;
     }
-
-    /* span 별 여백만 남김 (굵기는 기본값) */
-    #overlay span{
-        margin:0 15px;
-    }
+    #overlay span{ margin:0 15px; }
 </style>
 </head>
 
@@ -53,17 +40,28 @@
 </div>
 
 <script>
-    db.ref('overlayData').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if(data){
-            document.getElementById('dailyText')
-                .textContent   = `일 수익: ${data.daily}`;
-            document.getElementById('weeklyText')
-                .textContent  = `월 수익: ${data.weekly}`;
-            document.getElementById('monthlyText')
-                .textContent = `년 수익: ${data.monthly}`;
-        }
-    });
+/**
+ * 숫자를 천 단위마다 콤마를 넣어 포맷합니다.
+ * 예) 1234567 → "1,234,567"
+ */
+function formatNumber(value) {
+    // 정수값이 아니면 그대로 반환
+    if (isNaN(value)) return value;
+    // Intl.NumberFormat 사용(간단하고 국제화 지원)
+    return new Intl.NumberFormat('ko-KR').format(Math.round(value));
+}
+
+db.ref('overlayData').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if(data){
+        document.getElementById('dailyText')
+            .textContent   = `일 수익: ${formatNumber(parseInt(data.daily, 10))}`;
+        document.getElementById('weeklyText')
+            .textContent  = `월 수익: ${formatNumber(parseInt(data.weekly, 10))}`;
+        document.getElementById('monthlyText')
+            .textContent = `년 수익: ${formatNumber(parseInt(data.monthly, 10))}`;
+    }
+});
 </script>
 </body>
 </html>
