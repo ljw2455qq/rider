@@ -10,33 +10,37 @@
 <script src="firebase.js"></script>
 
 <style>
+    /* 전체 페이지 스타일 */
     body{
         margin:0;
         padding:0;
         background:transparent;
 
-        /* OBS가 사용하도록 설계한 기본 sans‑serif 폰트 */
+        /* OBS가 기본으로 쓰는 sans‑serif 폰트 체인 */
         font-family:
             -apple-system, BlinkMacSystemFont,
             "Segoe UI", Roboto, "Noto Sans KR",
             sans-serif;
-        font-weight:700;          /* 전체 글자 굵게 (OBS 스타일) */
+        /* 글자 굵기 제거 */
     }
 
+    /* 오버레이 박스 */
     #overlay{
         display:flex;
         justify-content:center;
         align-items:center;
-        background:rgba(0,0,0,.5);
-        color:white;
-        font-size:24px;
+
+        background:rgba(0,0,0,.5);  /* 반투명 검정 배경 */
+        color:white;                /* 흰색 글자 */
+
+        font-size:24px;             /* OBS와 동일한 기본 크기 */
         padding:10px 20px;
         border-radius:10px;
     }
-    /* span 별 여백과 굵게 적용 */
+
+    /* span 별 여백만 남김 (굵기는 기본값) */
     #overlay span{
         margin:0 15px;
-        font-weight:700;   /* 이미 body에 700 지정했지만, 명시적으로 두어도 OK */
     }
 </style>
 </head>
